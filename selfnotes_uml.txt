@@ -1,0 +1,158 @@
+SelfNotes Purpose (Brief)
+SelfNotes is a console-based student note sharing system. Students can register, log in, upload or type notes under subjects like English or Physics, view shared notes by subject, and open notes based on file type.
+
+Design Patterns Used (Brief)
+1. Singleton Pattern:
+   NoteManager is a single shared instance used to manage users, notes, and operations.
+2. Observer Pattern:
+   NotificationService observes note events and shows notifications when notes are added or deleted.
+3. Factory Pattern:
+   NoteFactory creates Note objects so object creation is centralized.
+4. Strategy Pattern:
+   Note creation method is selected at runtime:
+   - ManualNoteStrategy for typed content
+   - FileNoteStrategy for file-based content (.txt/.pdf)
+
+----------------------------------------
+PlantUML Block Diagram
+----------------------------------------
+@startuml
+skinparam componentStyle rectangle
+title SelfNotes Block Diagram
+
+actor Student
+
+rectangle "Console Application (Main)" as Main
+rectangle "Auth Module\n(Register/Login)" as Auth
+rectangle "Note Module\n(Add/View/Delete/Open)" as NoteModule
+rectangle "Subject Browser\n(Subjects -> Notes)" as SubjectBrowser
+rectangle "Notification Module\n(Observer)" as Notification
+rectangle "NoteManager\n(Singleton)" as Manager
+rectangle "NoteFactory\n(Factory)" as Factory
+rectangle "Note Creation Strategy\n(Strategy)" as Strategy
+rectangle "ManualNoteStrategy" as Manual
+rectangle "FileNoteStrategy" as FileStrat
+rectangle "In-Memory Storage\nUsers + Shared Notes" as Storage
+rectangle "Desktop/File Handler\n(Open PDF / Read TXT)" as FileHandler
+
+Student --> Main
+Main --> Auth
+Main --> NoteModule
+NoteModule --> SubjectBrowser
+NoteModule --> Strategy
+Strategy --> Manual
+Strategy --> FileStrat
+NoteModule --> Factory
+Auth --> Manager
+NoteModule --> Manager
+Manager --> Storage
+Manager --> Notification
+NoteModule --> FileHandler
+
+@enduml
+
+----------------------------------------
+PlantUML UML Class Diagram
+----------------------------------------
+@startuml
+title SelfNotes UML Class Diagram
+
+class App {
+  +main(String[] args)
+}
+
+class Main {
+  -scanner: Scanner
+  -noteManager: NoteManager
+  -noteCreatorContext: NoteCreatorContext
+  +main(String[] args)
+}
+
+class User {
+  -username: String
+  -password: String
+  +getUsername(): String
+  +checkPassword(inputPassword: String): boolean
+}
+
+class Note {
+  -id: int
+  -title: String
+  -subject: String
+  -uploaderName: String
+  -content: String
+  -filePath: String
+  -fileType: String
+}
+
+class NoteContentData {
+  -content: String
+  -filePath: String
+  -fileType: String
+}
+
+class NoteManager <<Singleton>> {
+  -instance: NoteManager
+  -users: Map<String, User>
+  -sharedNotes: List<Note>
+  -observers: List<NoteObserver>
+  -noteFactory: NoteFactory
+  +getInstance(): NoteManager
+  +registerUser(username: String, password: String): boolean
+  +loginUser(username: String, password: String): User
+  +addNote(user: User, subject: String, title: String, data: NoteContentData): Note
+  +getSubjects(): List<String>
+  +getNotesBySubject(subject: String): List<Note>
+  +deleteNote(user: User, noteId: int): int
+  +addObserver(observer: NoteObserver): void
+}
+
+class NoteFactory <<Factory>> {
+  +createNote(id: int, title: String, subject: String, uploaderName: String, content: String, filePath: String, fileType: String): Note
+}
+
+interface NoteObserver <<Observer>> {
+  +update(action: String, user: User, note: Note): void
+}
+
+class NotificationService {
+  +update(action: String, user: User, note: Note): void
+}
+
+interface NoteCreationStrategy <<Strategy>> {
+  +createContent(scanner: Scanner): NoteContentData
+}
+
+class ManualNoteStrategy {
+  +createContent(scanner: Scanner): NoteContentData
+}
+
+class FileNoteStrategy {
+  +createContent(scanner: Scanner): NoteContentData
+}
+
+class NoteCreatorContext {
+  -strategy: NoteCreationStrategy
+  +setStrategy(strategy: NoteCreationStrategy): void
+  +createContent(scanner: Scanner): NoteContentData
+}
+
+App --> Main
+Main --> NoteManager
+Main --> NoteCreatorContext
+Main --> User
+
+NoteManager --> User
+NoteManager --> Note
+NoteManager --> NoteFactory
+NoteManager --> NoteObserver
+
+NoteFactory --> Note
+NotificationService ..|> NoteObserver
+
+NoteCreatorContext --> NoteCreationStrategy
+ManualNoteStrategy ..|> NoteCreationStrategy
+FileNoteStrategy ..|> NoteCreationStrategy
+NoteCreationStrategy --> NoteContentData
+
+@enduml
