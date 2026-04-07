@@ -1,11 +1,13 @@
-// Purpose: Creates note content from direct user text input.
-import java.util.Scanner;
-
+// Strategy Pattern: concrete strategy for typed/manual note content.
 public class ManualNoteStrategy implements NoteCreationStrategy {
+    private final String text;
+
+    public ManualNoteStrategy(String text) {
+        this.text = text;
+    }
+
     @Override
-    public NoteContentData createContent(Scanner scanner) {
-        System.out.print("Enter note content: ");
-        String content = scanner.nextLine();
-        return new NoteContentData(content, null, "txt");
+    public NoteContentData createContent() {
+        return new NoteContentData(text, null, "txt");
     }
 }

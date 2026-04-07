@@ -1,16 +1,7 @@
-// Purpose: Observer implementation that prints note activity notifications.
+// Observer Pattern: concrete observer that prints notifications.
 public class NotificationService implements NoteObserver {
     @Override
-    public void update(String action, User user, Note note) {
-        System.out.println(
-                "Notification: "
-                        + action
-                        + " note '"
-                        + note.getTitle()
-                        + "' in subject "
-                        + note.getSubject()
-                        + " by "
-                        + note.getUploaderName()
-        );
+    public void update(String action, Note note) {
+        System.out.println("Notification: " + action + " | " + note.getTitle() + " | state: " + note.getStateName());
     }
 }

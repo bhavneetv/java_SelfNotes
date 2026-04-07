@@ -1,0 +1,35 @@
+
+=== SelfNotes (Simple) ===
+Logged in as: student1
+1. Upload Note
+2. View Notes By Subject
+3. Exit
+Choose option: Enter subject: Enter title: Choose input type:
+1. Manual text
+2. File path
+Choose option: Enter note text: Notification: Added | Kinematics | state: Draft
+Set note state:
+1. Draft
+2. Published
+3. Archived
+Choose option: Notification: State changed to Published | Kinematics | state: Published
+Note uploaded successfully.
+
+=== SelfNotes (Simple) ===
+Logged in as: student1
+1. Upload Note
+2. View Notes By Subject
+3. Exit
+Choose option: Available subjects:
+1. Physics
+Select subject number: 
+Notes in subject: Physics
+1. Kinematics | type: txt | state: Published
+   Content: Motion notes
+
+=== SelfNotes (Simple) ===
+Logged in as: student1
+1. Upload Note
+2. View Notes By Subject
+3. Exit
+Choose option: Exiting SelfNotes.

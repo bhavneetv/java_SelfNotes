@@ -1,4 +1,3 @@
-// Purpose: Carries note content and file details produced by creation strategies.
 public class NoteContentData {
     private final String content;
     private final String filePath;

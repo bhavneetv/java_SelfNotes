@@ -1,6 +1,4 @@
-// Purpose: Holds and executes the selected note creation strategy at runtime.
-import java.util.Scanner;
-
+// Strategy Pattern: context that switches strategy at runtime.
 public class NoteCreatorContext {
     private NoteCreationStrategy strategy;
 
@@ -8,10 +6,10 @@ public class NoteCreatorContext {
         this.strategy = strategy;
     }
 
-    public NoteContentData createContent(Scanner scanner) {
+    public NoteContentData createContent() {
         if (strategy == null) {
-            return null;
+            throw new IllegalStateException("Strategy is not set.");
         }
-        return strategy.createContent(scanner);
+        return strategy.createContent();
     }
 }

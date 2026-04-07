@@ -1,29 +1,29 @@
-// Purpose: Handles console menus and user interaction for the SelfNotes app.
 import java.util.List;
 import java.util.Scanner;
-import java.awt.Desktop;
-import java.io.File;
-import java.io.IOException;
 
 public class Main {
     private static final Scanner scanner = new Scanner(System.in);
-    private static final NoteManager noteManager = NoteManager.getInstance();
-    private static final NoteCreatorContext noteCreatorContext = new NoteCreatorContext();
+    // Singleton Pattern
+    private static final NoteManager manager = NoteManager.getInstance();
+    // Strategy Pattern
+    private static final NoteCreatorContext context = new NoteCreatorContext();
+    private static final User currentUser = new User("student1");
 
     public static void main(String[] args) {
-        noteManager.addObserver(new NotificationService());
-        boolean running = true;
+        // Observer Pattern
+        manager.addObserver(new NotificationService());
 
+        boolean running = true;
         while (running) {
-            showMainMenu();
+            showMenu();
             int choice = readInt();
 
             switch (choice) {
                 case 1:
-                    register();
+                    uploadNote();
                     break;
                 case 2:
-                    login();
+                    viewNotesBySubject();
                     break;
                 case 3:
                     running = false;
@@ -35,228 +35,108 @@ public class Main {
         }
     }
 
-    private static void showMainMenu() {
+    private static void showMenu() {
         System.out.println();
-        System.out.println("=== SelfNotes ===");
-        System.out.println("1. Register");
-        System.out.println("2. Login");
+        System.out.println("=== SelfNotes (Simple) ===");
+        System.out.println("Logged in as: " + currentUser.getUsername());
+        System.out.println("1. Upload Note");
+        System.out.println("2. View Notes By Subject");
         System.out.println("3. Exit");
-        System.out.print("Choose an option: ");
+        System.out.print("Choose option: ");
     }
 
-    private static void register() {
-        System.out.print("Enter username: ");
-        String username = scanner.nextLine();
-        System.out.print("Enter password: ");
-        String password = scanner.nextLine();
-
-        boolean registered = noteManager.registerUser(username, password);
-        if (registered) {
-            System.out.println("Account created successfully.");
-        } else {
-            System.out.println("Username already exists.");
-        }
-    }
-
-    private static void login() {
-        System.out.print("Enter username: ");
-        String username = scanner.nextLine();
-        System.out.print("Enter password: ");
-        String password = scanner.nextLine();
-
-        User user = noteManager.loginUser(username, password);
-        if (user == null) {
-            System.out.println("Invalid username or password.");
-            return;
-        }
-
-        System.out.println("Login successful.");
-        userMenu(user);
-    }
-
-    private static void userMenu(User user) {
-        boolean loggedIn = true;
-        while (loggedIn) {
-            System.out.println();
-            System.out.println("=== Notes Menu ===");
-            System.out.println("1. Add Note");
-            System.out.println("2. View Notes");
-            System.out.println("3. Delete Note");
-            System.out.println("4. Logout");
-            System.out.print("Choose an option: ");
-
-            int choice = readInt();
-            switch (choice) {
-                case 1:
-                    addNote(user);
-                    break;
-                case 2:
-                    viewNotes(user);
-                    break;
-                case 3:
-                    deleteNote(user);
-                    break;
-                case 4:
-                    loggedIn = false;
-                    System.out.println("Logged out.");
-                    break;
-                default:
-                    System.out.println("Invalid option.");
-            }
-        }
-    }
-
-    private static void addNote(User user) {
-        System.out.print("Enter subject (example: English, Physics): ");
+    private static void uploadNote() {
+        System.out.print("Enter subject: ");
         String subject = scanner.nextLine().trim();
         if (subject.isEmpty()) {
             System.out.println("Subject cannot be empty.");
             return;
         }
 
-        System.out.print("Enter note title: ");
+        System.out.print("Enter title: ");
         String title = scanner.nextLine().trim();
         if (title.isEmpty()) {
             System.out.println("Title cannot be empty.");
             return;
         }
 
-        System.out.println("Choose note creation method:");
-        System.out.println("1. Type Text Note");
-        System.out.println("2. Upload .txt or .pdf");
-        System.out.print("Choose an option: ");
-        int method = readInt();
+        System.out.println("Choose input type:");
+        System.out.println("1. Manual text");
+        System.out.println("2. File path");
+        System.out.print("Choose option: ");
+        int inputType = readInt();
 
-        if (method == 1) {
-            noteCreatorContext.setStrategy(new ManualNoteStrategy());
-        } else if (method == 2) {
-            noteCreatorContext.setStrategy(new FileNoteStrategy());
+        if (inputType == 1) {
+            System.out.print("Enter note text: ");
+            String text = scanner.nextLine();
+            context.setStrategy(new ManualNoteStrategy(text));
+        } else if (inputType == 2) {
+            System.out.print("Enter file path (.txt/.pdf): ");
+            String filePath = scanner.nextLine();
+            context.setStrategy(new FileNoteStrategy(filePath));
         } else {
-            System.out.println("Invalid note creation method.");
+            System.out.println("Invalid input type.");
             return;
         }
 
-        NoteContentData contentData = noteCreatorContext.createContent(scanner);
-        if (contentData == null) {
-            System.out.println("Note was not created.");
-            return;
+        Note note = manager.addNote(currentUser, subject, title, context.createContent());
+
+        // State Pattern
+        System.out.println("Set note state:");
+        System.out.println("1. Draft");
+        System.out.println("2. Published");
+        System.out.println("3. Archived");
+        System.out.print("Choose option: ");
+        int stateChoice = readInt();
+
+        if (stateChoice == 2) {
+            manager.changeNoteState(currentUser, note.getId(), new PublishedState());
+        } else if (stateChoice == 3) {
+            manager.changeNoteState(currentUser, note.getId(), new ArchivedState());
         }
 
-        noteManager.addNote(user, subject, title, contentData);
-        System.out.println("Note shared successfully.");
+        System.out.println("Note uploaded successfully.");
     }
 
-    private static void viewNotes(User user) {
-        List<String> subjects = noteManager.getSubjects();
+    private static void viewNotesBySubject() {
+        List<String> subjects = manager.getSubjects();
         if (subjects.isEmpty()) {
             System.out.println("No notes found.");
             return;
         }
 
-        while (true) {
-            System.out.println();
-            System.out.println("Available subjects:");
-            for (int i = 0; i < subjects.size(); i++) {
-                System.out.println((i + 1) + ". " + subjects.get(i));
-            }
-            System.out.println("0. Back");
-            System.out.print("Select subject: ");
-
-            int subjectChoice = readInt();
-            if (subjectChoice == 0) {
-                return;
-            }
-            if (subjectChoice < 1 || subjectChoice > subjects.size()) {
-                System.out.println("Invalid subject option.");
-                continue;
-            }
-
-            String selectedSubject = subjects.get(subjectChoice - 1);
-            viewNotesBySubject(selectedSubject);
+        System.out.println("Available subjects:");
+        for (int i = 0; i < subjects.size(); i++) {
+            System.out.println((i + 1) + ". " + subjects.get(i));
         }
-    }
+        System.out.print("Select subject number: ");
+        int subjectChoice = readInt();
 
-    private static void viewNotesBySubject(String subject) {
-        List<Note> notes = noteManager.getNotesBySubject(subject);
+        if (subjectChoice < 1 || subjectChoice > subjects.size()) {
+            System.out.println("Invalid subject.");
+            return;
+        }
+
+        String selectedSubject = subjects.get(subjectChoice - 1);
+        List<Note> notes = manager.getNotesBySubject(selectedSubject);
         if (notes.isEmpty()) {
-            System.out.println("No notes found for this subject.");
+            System.out.println("No notes in this subject.");
             return;
         }
 
-        while (true) {
-            System.out.println();
-            System.out.println("Subject: " + subject);
-            for (int i = 0; i < notes.size(); i++) {
-                Note note = notes.get(i);
-                System.out.println(
-                        (i + 1)
-                                + ". "
-                                + note.getTitle()
-                                + " | uploader: "
-                                + note.getUploaderName()
-                                + " | type: "
-                                + note.getFileType()
-                                + " | id: "
-                                + note.getId()
-                );
-            }
-            System.out.println("0. Back");
-            System.out.print("Select note: ");
-
-            int noteChoice = readInt();
-            if (noteChoice == 0) {
-                return;
-            }
-            if (noteChoice < 1 || noteChoice > notes.size()) {
-                System.out.println("Invalid note option.");
-                continue;
-            }
-
-            Note selectedNote = notes.get(noteChoice - 1);
-            openNote(selectedNote);
-        }
-    }
-
-    private static void openNote(Note note) {
-        if ("pdf".equalsIgnoreCase(note.getFileType())) {
-            if (note.getFilePath() == null || note.getFilePath().isEmpty()) {
-                System.out.println("PDF path is missing.");
-                return;
-            }
-            try {
-                if (!Desktop.isDesktopSupported()) {
-                    System.out.println("Desktop open is not supported on this system.");
-                    System.out.println("PDF path: " + note.getFilePath());
-                    return;
-                }
-                Desktop.getDesktop().open(new File(note.getFilePath()));
-                System.out.println("Opened PDF: " + note.getFilePath());
-            } catch (IOException e) {
-                System.out.println("Could not open PDF: " + e.getMessage());
-            }
-            return;
-        }
-
-        System.out.println("----------------------------------");
-        System.out.println("Title: " + note.getTitle());
-        System.out.println("Subject: " + note.getSubject());
-        System.out.println("Uploader: " + note.getUploaderName());
-        System.out.println("Content:");
-        System.out.println(note.getContent());
-        System.out.println("----------------------------------");
-    }
-
-    private static void deleteNote(User user) {
-        System.out.print("Enter note id to delete: ");
-        int noteId = readInt();
-
-        int result = noteManager.deleteNote(user, noteId);
-        if (result == 1) {
-            System.out.println("Note deleted successfully.");
-        } else if (result == 2) {
-            System.out.println("You can only delete notes uploaded by your account.");
-        } else {
-            System.out.println("Note id not found.");
+        System.out.println();
+        System.out.println("Notes in subject: " + selectedSubject);
+        for (Note note : notes) {
+            System.out.println(
+                    note.getId()
+                            + ". "
+                            + note.getTitle()
+                            + " | type: "
+                            + note.getFileType()
+                            + " | state: "
+                            + note.getStateName()
+            );
+            System.out.println("   Content: " + note.read(currentUser));
         }
     }
 
@@ -266,7 +146,7 @@ public class Main {
             try {
                 return Integer.parseInt(input.trim());
             } catch (NumberFormatException e) {
-                System.out.print("Please enter a valid number: ");
+                System.out.print("Enter a valid number: ");
             }
         }
     }

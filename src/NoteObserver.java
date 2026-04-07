@@ -1,4 +1,4 @@
-// Purpose: Observer interface for note add/delete notification events.
+// Observer Pattern: observer contract for note events.
 public interface NoteObserver {
-    void update(String action, User user, Note note);
+    void update(String action, Note note);
 }

@@ -1,61 +1,55 @@
-SelfNotes Purpose (Brief)
-SelfNotes is a console-based student note sharing system. Students can register, log in, upload or type notes under subjects like English or Physics, view shared notes by subject, and open notes based on file type.
-
-Design Patterns Used (Brief)
-1. Singleton Pattern:
-   NoteManager is a single shared instance used to manage users, notes, and operations.
-2. Observer Pattern:
-   NotificationService observes note events and shows notifications when notes are added or deleted.
-3. Factory Pattern:
-   NoteFactory creates Note objects so object creation is centralized.
-4. Strategy Pattern:
-   Note creation method is selected at runtime:
-   - ManualNoteStrategy for typed content
-   - FileNoteStrategy for file-based content (.txt/.pdf)
+SelfNotes PlantUML
 
 ----------------------------------------
 PlantUML Block Diagram
 ----------------------------------------
 @startuml
 skinparam componentStyle rectangle
-title SelfNotes Block Diagram
+title SelfNotes Simple Block Diagram
 
 actor Student
 
-rectangle "Console Application (Main)" as Main
-rectangle "Auth Module\n(Register/Login)" as Auth
-rectangle "Note Module\n(Add/View/Delete/Open)" as NoteModule
-rectangle "Subject Browser\n(Subjects -> Notes)" as SubjectBrowser
-rectangle "Notification Module\n(Observer)" as Notification
-rectangle "NoteManager\n(Singleton)" as Manager
-rectangle "NoteFactory\n(Factory)" as Factory
-rectangle "Note Creation Strategy\n(Strategy)" as Strategy
-rectangle "ManualNoteStrategy" as Manual
-rectangle "FileNoteStrategy" as FileStrat
-rectangle "In-Memory Storage\nUsers + Shared Notes" as Storage
-rectangle "Desktop/File Handler\n(Open PDF / Read TXT)" as FileHandler
+rectangle "Main Menu\n1. Upload Note\n2. View Notes By Subject\n3. Exit" as MainMenu
+rectangle "Upload Note Flow" as UploadFlow
+rectangle "View Notes By Subject Flow" as ViewFlow
 
-Student --> Main
-Main --> Auth
-Main --> NoteModule
-NoteModule --> SubjectBrowser
-NoteModule --> Strategy
-Strategy --> Manual
-Strategy --> FileStrat
-NoteModule --> Factory
-Auth --> Manager
-NoteModule --> Manager
-Manager --> Storage
-Manager --> Notification
-NoteModule --> FileHandler
+rectangle "NoteManager\n<<Singleton>>" as NoteManager
+rectangle "NoteFactory\n<<Factory>>" as NoteFactory
+rectangle "NoteCreatorContext\n<<Strategy>>" as StrategyContext
+rectangle "ManualNoteStrategy" as ManualStrategy
+rectangle "FileNoteStrategy" as FileStrategy
+rectangle "NotificationService\n<<Observer>>" as NotificationService
+rectangle "NoteState\n<<State>>" as NoteState
+rectangle "DraftState" as DraftState
+rectangle "PublishedState" as PublishedState
+rectangle "ArchivedState" as ArchivedState
+rectangle "In-Memory Notes List" as Storage
 
+Student --> MainMenu
+MainMenu --> UploadFlow
+MainMenu --> ViewFlow
+
+UploadFlow --> StrategyContext
+StrategyContext --> ManualStrategy
+StrategyContext --> FileStrategy
+
+UploadFlow --> NoteManager
+ViewFlow --> NoteManager
+
+NoteManager --> NoteFactory
+NoteFactory --> Storage
+NoteManager --> NotificationService
+NoteManager --> NoteState
+NoteState --> DraftState
+NoteState --> PublishedState
+NoteState --> ArchivedState
 @enduml
 
 ----------------------------------------
 PlantUML UML Class Diagram
 ----------------------------------------
 @startuml
-title SelfNotes UML Class Diagram
+title SelfNotes Simple UML Class Diagram
 
 class App {
   +main(String[] args)
@@ -63,16 +57,15 @@ class App {
 
 class Main {
   -scanner: Scanner
-  -noteManager: NoteManager
-  -noteCreatorContext: NoteCreatorContext
+  -manager: NoteManager
+  -context: NoteCreatorContext
+  -currentUser: User
   +main(String[] args)
 }
 
 class User {
   -username: String
-  -password: String
   +getUsername(): String
-  +checkPassword(inputPassword: String): boolean
 }
 
 class Note {
@@ -83,28 +76,39 @@ class Note {
   -content: String
   -filePath: String
   -fileType: String
+  -state: NoteState
+  +getId(): int
+  +getTitle(): String
+  +getSubject(): String
+  +getUploaderName(): String
+  +getFileType(): String
+  +isOwner(user: User): boolean
+  +changeState(nextState: NoteState): void
+  +getStateName(): String
+  +read(viewer: User): String
+  +getDisplayContent(): String
 }
 
 class NoteContentData {
   -content: String
   -filePath: String
   -fileType: String
+  +getContent(): String
+  +getFilePath(): String
+  +getFileType(): String
 }
 
 class NoteManager <<Singleton>> {
   -instance: NoteManager
-  -users: Map<String, User>
-  -sharedNotes: List<Note>
+  -notes: List<Note>
   -observers: List<NoteObserver>
   -noteFactory: NoteFactory
   +getInstance(): NoteManager
-  +registerUser(username: String, password: String): boolean
-  +loginUser(username: String, password: String): User
+  +addObserver(observer: NoteObserver): void
   +addNote(user: User, subject: String, title: String, data: NoteContentData): Note
+  +changeNoteState(user: User, noteId: int, nextState: NoteState): boolean
   +getSubjects(): List<String>
   +getNotesBySubject(subject: String): List<Note>
-  +deleteNote(user: User, noteId: int): int
-  +addObserver(observer: NoteObserver): void
 }
 
 class NoteFactory <<Factory>> {
@@ -112,41 +116,63 @@ class NoteFactory <<Factory>> {
 }
 
 interface NoteObserver <<Observer>> {
-  +update(action: String, user: User, note: Note): void
+  +update(action: String, note: Note): void
 }
 
 class NotificationService {
-  +update(action: String, user: User, note: Note): void
+  +update(action: String, note: Note): void
 }
 
 interface NoteCreationStrategy <<Strategy>> {
-  +createContent(scanner: Scanner): NoteContentData
+  +createContent(): NoteContentData
 }
 
 class ManualNoteStrategy {
-  +createContent(scanner: Scanner): NoteContentData
+  -text: String
+  +createContent(): NoteContentData
 }
 
 class FileNoteStrategy {
-  +createContent(scanner: Scanner): NoteContentData
+  -filePath: String
+  +createContent(): NoteContentData
 }
 
 class NoteCreatorContext {
   -strategy: NoteCreationStrategy
   +setStrategy(strategy: NoteCreationStrategy): void
-  +createContent(scanner: Scanner): NoteContentData
+  +createContent(): NoteContentData
+}
+
+interface NoteState <<State>> {
+  +getName(): String
+  +read(note: Note, viewer: User): String
+}
+
+class DraftState {
+  +getName(): String
+  +read(note: Note, viewer: User): String
+}
+
+class PublishedState {
+  +getName(): String
+  +read(note: Note, viewer: User): String
+}
+
+class ArchivedState {
+  +getName(): String
+  +read(note: Note, viewer: User): String
 }
 
 App --> Main
 Main --> NoteManager
 Main --> NoteCreatorContext
 Main --> User
+Main --> NoteState
 
-NoteManager --> User
 NoteManager --> Note
 NoteManager --> NoteFactory
 NoteManager --> NoteObserver
-
+NoteManager --> NoteState
 NoteFactory --> Note
 NotificationService ..|> NoteObserver
 
@@ -155,4 +181,8 @@ ManualNoteStrategy ..|> NoteCreationStrategy
 FileNoteStrategy ..|> NoteCreationStrategy
 NoteCreationStrategy --> NoteContentData
 
+Note --> NoteState
+DraftState ..|> NoteState
+PublishedState ..|> NoteState
+ArchivedState ..|> NoteState
 @enduml

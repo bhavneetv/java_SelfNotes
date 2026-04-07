@@ -1,6 +1,4 @@
-// Purpose: Strategy interface for different note content creation methods.
-import java.util.Scanner;
-
+// Strategy Pattern: common interface for note content creation.
 public interface NoteCreationStrategy {
-    NoteContentData createContent(Scanner scanner);
+    NoteContentData createContent();
 }

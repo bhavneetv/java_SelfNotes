@@ -1,26 +1,24 @@
-// Purpose: Singleton service that manages users, shared notes, and note operations.
 import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Iterator;
 import java.util.LinkedHashSet;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 
 public class NoteManager {
+    // Singleton Pattern: one shared instance for the full app.
     private static NoteManager instance;
-    private final Map<String, User> users;
-    private final List<Note> sharedNotes;
+
+    private final List<Note> notes;
     private final List<NoteObserver> observers;
+
+    // Factory Pattern: centralized note construction.
     private final NoteFactory noteFactory;
-    private int noteIdCounter;
+    private int nextId;
 
     private NoteManager() {
-        users = new HashMap<>();
-        sharedNotes = new ArrayList<>();
+        notes = new ArrayList<>();
         observers = new ArrayList<>();
         noteFactory = new NoteFactory();
-        noteIdCounter = 1;
+        nextId = 1;
     }
 
     public static NoteManager getInstance() {
@@ -30,43 +28,42 @@ public class NoteManager {
         return instance;
     }
 
-    public boolean registerUser(String username, String password) {
-        if (users.containsKey(username)) {
-            return false;
-        }
-        users.put(username, new User(username, password));
-        return true;
+    public void addObserver(NoteObserver observer) {
+        observers.add(observer);
     }
 
-    public User loginUser(String username, String password) {
-        User user = users.get(username);
-        if (user == null) {
-            return null;
-        }
-        if (!user.checkPassword(password)) {
-            return null;
-        }
-        return user;
-    }
-
-    public Note addNote(User user, String subject, String title, NoteContentData noteContentData) {
+    public Note addNote(User user, String subject, String title, NoteContentData data) {
         Note note = noteFactory.createNote(
-                noteIdCounter++,
+                nextId++,
                 title,
                 subject,
                 user.getUsername(),
-                noteContentData.getContent(),
-                noteContentData.getFilePath(),
-                noteContentData.getFileType()
+                data.getContent(),
+                data.getFilePath(),
+                data.getFileType()
         );
-        sharedNotes.add(note);
-        notifyObservers("Added", user, note);
+        notes.add(note);
+        notifyObservers("Added", note);
         return note;
+    }
+
+    public boolean changeNoteState(User user, int noteId, NoteState nextState) {
+        Note note = findById(noteId);
+        if (note == null || !note.isOwner(user)) {
+            return false;
+        }
+        note.changeState(nextState);
+        notifyObservers("State changed to " + note.getStateName(), note);
+        return true;
+    }
+
+    public List<Note> getAllNotes() {
+        return new ArrayList<>(notes);
     }
 
     public List<String> getSubjects() {
         Set<String> subjects = new LinkedHashSet<>();
-        for (Note note : sharedNotes) {
+        for (Note note : notes) {
             subjects.add(note.getSubject());
         }
         return new ArrayList<>(subjects);
@@ -74,7 +71,7 @@ public class NoteManager {
 
     public List<Note> getNotesBySubject(String subject) {
         List<Note> result = new ArrayList<>();
-        for (Note note : sharedNotes) {
+        for (Note note : notes) {
             if (note.getSubject().equalsIgnoreCase(subject)) {
                 result.add(note);
             }
@@ -82,29 +79,18 @@ public class NoteManager {
         return result;
     }
 
-    public int deleteNote(User user, int noteId) {
-        Iterator<Note> iterator = sharedNotes.iterator();
-        while (iterator.hasNext()) {
-            Note note = iterator.next();
+    private Note findById(int noteId) {
+        for (Note note : notes) {
             if (note.getId() == noteId) {
-                if (!note.getUploaderName().equals(user.getUsername())) {
-                    return 2;
-                }
-                iterator.remove();
-                notifyObservers("Deleted", user, note);
-                return 1;
+                return note;
             }
         }
-        return 0;
+        return null;
     }
 
-    public void addObserver(NoteObserver observer) {
-        observers.add(observer);
-    }
-
-    private void notifyObservers(String action, User user, Note note) {
+    private void notifyObservers(String action, Note note) {
         for (NoteObserver observer : observers) {
-            observer.update(action, user, note);
+            observer.update(action, note);
         }
     }
 }

@@ -1,4 +1,3 @@
-// Purpose: Represents a shared note with subject, uploader, content, and file metadata.
 public class Note {
     private final int id;
     private final String title;
@@ -8,6 +7,9 @@ public class Note {
     private final String filePath;
     private final String fileType;
 
+    // State Pattern: each Note has a state object.
+    private NoteState state;
+
     public Note(int id, String title, String subject, String uploaderName, String content, String filePath, String fileType) {
         this.id = id;
         this.title = title;
@@ -16,6 +18,7 @@ public class Note {
         this.content = content;
         this.filePath = filePath;
         this.fileType = fileType;
+        this.state = new DraftState();
     }
 
     public int getId() {
@@ -34,15 +37,32 @@ public class Note {
         return uploaderName;
     }
 
-    public String getContent() {
-        return content;
-    }
-
-    public String getFilePath() {
-        return filePath;
-    }
-
     public String getFileType() {
         return fileType;
+    }
+
+    public boolean isOwner(User user) {
+        return user != null && uploaderName.equals(user.getUsername());
+    }
+
+    public void changeState(NoteState nextState) {
+        if (nextState != null) {
+            state = nextState;
+        }
+    }
+
+    public String getStateName() {
+        return state.getName();
+    }
+
+    public String read(User viewer) {
+        return state.read(this, viewer);
+    }
+
+    public String getDisplayContent() {
+        if ("pdf".equalsIgnoreCase(fileType)) {
+            return "PDF path: " + filePath;
+        }
+        return content;
     }
 }
